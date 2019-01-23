@@ -1,0 +1,42 @@
+METHOD GET PATHS(Path project method;$methods)
+
+$props:=New collection
+C_OBJECT($attributes)
+$names:=New collection
+For ($i;1;Size of array($methods))
+	$method:=$methods{$i}
+	METHOD GET ATTRIBUTES($method;$attributes;*)
+	If (Current method path#$method)
+		$attributes.path:=$method
+		$props.push($attributes)
+	Else 
+		$name:=""
+		For each ($name;$attributes)
+			$names.push($name)
+		End for each 
+	End if 
+	CLEAR VARIABLE($attributes)
+End for 
+
+$counts:=New collection
+
+For each ($name;$names)
+	
+	$count:=New collection
+	Case of 
+		: ($name="preemptive")
+			$count.push($name)
+			$count.push($props.countValues("capable";$name))
+			$count.push($props.countValues("indifferent";$name))
+			$count.push($props.countValues("incapable";$name))
+			$counts.push($count.join("\t";ck ignore null or empty))
+		else
+			$count.push($name)
+			$count.push($props.countValues(True;$name))
+			$count.push($props.length-($count[$count.length-1]))
+			$counts.push($count.join("\t";ck ignore null or empty))
+	End case
+	
+End for each
+
+SET TEXT TO PASTEBOARD($counts.join("\r";ck ignore null or empty))
