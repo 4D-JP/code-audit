@@ -12,6 +12,10 @@ For ($i;1;$lines.length)
 	End if 
 End for 
 
+ARRAY TEXT($command_names;0)
+OB GET PROPERTY NAMES($commands;$command_names)
+$total:=Size of array($command_names)
+
 METHOD GET PATHS(Path all objects;$methods)
 
 $token:="([[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]))"
@@ -36,7 +40,7 @@ For ($m;1;Size of array($methods))
 						$command:=Substring($line;$pos{3};$len{3})
 						$command_name:=Substring($line;$pos{2};$len{2})
 						$command_o:=$commands[$command]
-						if($command_o.name=$command_name)
+						If ($command_o.name=$command_name)
 							If ($command_o.count=0)
 								$used_commands.push($command_o)
 							End if 
@@ -55,7 +59,8 @@ C_COLLECTION($col)
 $col:=New collection
 C_OBJECT($o)
 For each ($o;$used_commands)
-	$col.push($o.name+"\t"+String($o.count))
+	$ratio:=""  //"\t"+string(100*$o.count/$total)
+	$col.push($o.name+"\t"+String($o.count)+$ratio)
 End for each 
 
 SET TEXT TO PASTEBOARD($col.join("\r"))
