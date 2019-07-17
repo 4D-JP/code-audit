@@ -1,0 +1,49 @@
+$dataTypeMap:=New collection
+$dataTypeMap[1]:="boolean"
+  //
+$dataTypeMap[3]:="16-bit integer"
+$dataTypeMap[4]:="32-bit integer"
+$dataTypeMap[5]:="64-bit integer"
+$dataTypeMap[6]:="real"
+$dataTypeMap[7]:="float"
+$dataTypeMap[8]:="date"
+$dataTypeMap[9]:="time"
+$dataTypeMap[10]:="text inside record"
+  //11
+$dataTypeMap[12]:="picture"
+$dataTypeMap[13]:="UUID"
+$dataTypeMap[14]:="text outside record"
+  //15
+  //16
+  //17
+$dataTypeMap[18]:="BLOB"
+$dataTypeMap[19]:="text inside record"  //utf8
+$dataTypeMap[20]:="text outside record"  //utf8
+$dataTypeMap[21]:="object"
+
+ARRAY LONGINT($fieldTypes;0)
+
+Begin SQL
+	SELECT DISTINCT(DATA_TYPE) FROM _USER_COLUMNS 
+	INTO :$fieldTypes
+End SQL
+
+C_COLLECTION($types)
+$types:=New collection
+ARRAY TO COLLECTION($types;$fieldTypes)
+
+C_COLLECTION($results)
+$results:=New collection
+
+C_LONGINT($type;$count)
+
+For each ($type;$types)
+	Begin SQL
+		SELECT COUNT(*) FROM _USER_COLUMNS
+		WHERE DATA_TYPE = :$type
+		INTO :$count
+	End SQL
+	$results.push(New collection($dataTypeMap[$type];String($count)).join("\t"))
+End for each 
+
+SET TEXT TO PASTEBOARD($results.join("\r"))
