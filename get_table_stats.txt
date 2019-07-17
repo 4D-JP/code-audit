@@ -1,5 +1,3 @@
-$result:=""
-
 ARRAY LONGINT($recordsInTable;0)
 ARRAY LONGINT($fieldsInTable;0)
 ARRAY LONGINT($deletedFieldsInTable;0)
@@ -23,13 +21,17 @@ For ($table;1;Get last table number)
 End for 
 
 $recordsInDatabase:=Sum($recordsInTable)
+
+C_COLLECTION($results)
+$results:=New collection
+
 For ($i;1;Size of array($tableName))
-	$result:=$result+\
-	$tableName{$i}+"\t"+\
-	String($fragmentation{$i};"##0.00")+"\t"+\
-	String($fieldsInTable{$i})+"\t"+\
-	String($deletedFieldsInTable{$i})+"\t"+\
-	String($recordsInTable{$i}/$recordsInDatabase;"##0.00")+"\r"
+	$results.push(New collection(\
+	$tableName{$i};\
+	String($fragmentation{$i};"##0.00");\
+	String($fieldsInTable{$i});\
+	String($deletedFieldsInTable{$i});\
+	String($recordsInTable{$i}/$recordsInDatabase;"##0.00")).join("\t"))
 End for 
 
-SET TEXT TO PASTEBOARD($result)
+SET TEXT TO PASTEBOARD($results.join("\r"))
