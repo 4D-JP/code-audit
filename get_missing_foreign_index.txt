@@ -1,0 +1,58 @@
+ARRAY LONGINT($tn;0)
+ARRAY LONGINT($fn;0)
+
+  //N-field
+Begin SQL
+	SELECT _USER_COLUMNS.TABLE_ID,_USER_COLUMNS.COLUMN_ID
+	FROM _USER_CONS_COLUMNS,_USER_COLUMNS,_USER_CONSTRAINTS
+	WHERE _USER_CONSTRAINTS.CONSTRAINT_TYPE= '4DR'
+	AND _USER_CONSTRAINTS.CONSTRAINT_ID = _USER_CONS_COLUMNS.CONSTRAINT_ID
+	AND _USER_COLUMNS.TABLE_ID = _USER_CONSTRAINTS.TABLE_ID
+	AND _USER_COLUMNS.COLUMN_ID = _USER_CONS_COLUMNS.COLUMN_ID
+	INTO :$tn,:$fn;
+End SQL
+
+$count:=0
+
+MULTI SORT ARRAY($tn;>;$fn;>)
+
+$results:=New collection
+
+For ($i;1;Size of array($tn))
+	
+	$t:=$tn{$i}
+	$f:=$fn{$i}
+	
+	Begin SQL
+		SELECT COUNT(*)
+		FROM _USER_IND_COLUMNS
+		WHERE _USER_IND_COLUMNS.TABLE_ID = :$t
+		AND _USER_IND_COLUMNS.COLUMN_ID = :$f
+		INTO :$count;
+	End SQL
+	
+	If ($count=0)
+		
+		$tr:=0
+		$fr:=0
+		
+		Begin SQL
+			SELECT _USER_CONSTRAINTS.RELATED_TABLE_ID,_USER_CONS_COLUMNS.RELATED_COLUMN_ID
+			FROM _USER_CONS_COLUMNS,_USER_COLUMNS,_USER_CONSTRAINTS
+			WHERE _USER_CONSTRAINTS.CONSTRAINT_TYPE= '4DR'
+			AND _USER_CONSTRAINTS.CONSTRAINT_ID = _USER_CONS_COLUMNS.CONSTRAINT_ID
+			AND _USER_CONS_COLUMNS.TABLE_ID = :$t
+			AND _USER_CONS_COLUMNS.COLUMN_ID = :$f
+			LIMIT 1
+			INTO :$tr,:$fr;
+		End SQL
+		
+		$results.push(New collection(\
+		Parse formula("[:"+String($t)+"]:"+String($f);Formula out with tokens);\
+		Parse formula("[:"+String($tr)+"]:"+String($fr);Formula out with tokens)).join("\t"))
+		
+	End if 
+	
+End for 
+
+SET TEXT TO PASTEBOARD($results.join("\r"))
