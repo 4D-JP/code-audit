@@ -16,7 +16,6 @@ Begin SQL
 	
 End SQL
 
-
 $result:=0
 
 For ($i;1;Size of array($tn))
