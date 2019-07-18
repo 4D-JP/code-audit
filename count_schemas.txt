@@ -1,0 +1,8 @@
+$count:=0
+
+Begin SQL
+	
+	SELECT COUNT(*) FROM _USER_SCHEMAS
+	INTO :$count
+	
+End SQL
