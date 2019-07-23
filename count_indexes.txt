@@ -1,0 +1,9 @@
+$count:=0
+
+Begin SQL
+	
+	SELECT COUNT(*)
+	FROM _USER_INDEXES
+	INTO :$count
+	
+End SQL
