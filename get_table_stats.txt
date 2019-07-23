@@ -3,6 +3,7 @@ ARRAY LONGINT($fieldsInTable;0)
 ARRAY LONGINT($deletedFieldsInTable;0)
 ARRAY LONGINT($fragmentation;0)
 ARRAY TEXT($tableName;0)
+ARRAY LONGINT($tableId;0)
 
 For ($table;1;Get last table number)
 	If (Is table number valid($table))
@@ -17,8 +18,17 @@ For ($table;1;Get last table number)
 		APPEND TO ARRAY($recordsInTable;Records in table(Table($table)->))
 		APPEND TO ARRAY($fragmentation;Get table fragmentation(Table($table)->))
 		APPEND TO ARRAY($tableName;Table name($table))
+		APPEND TO ARRAY($tableId;$table)
 	End if 
 End for 
+
+MULTI SORT ARRAY(\
+$fieldsInTable;<;\
+$recordsInTable;<;\
+$tableName;<;\
+$tableId;<;\
+$deletedFieldsInTable;<;\
+$fragmentation;<)
 
 $recordsInDatabase:=Sum($recordsInTable)
 
@@ -26,12 +36,22 @@ C_COLLECTION($results)
 $results:=New collection
 
 For ($i;1;Size of array($tableName))
+	
+	CREATE RECORD(Table($tableId{$i})->)
+	$path:=Temporary folder+Generate UUID
+	SET CHANNEL(10;$path)
+	SEND RECORD(Table($tableId{$i})->)
+	SET CHANNEL(11)
+	$size:=Get document size($path)
+	
 	$results.push(New collection(\
 	$tableName{$i};\
 	String($fragmentation{$i};"##0.00");\
 	String($fieldsInTable{$i});\
 	String($deletedFieldsInTable{$i});\
-	String($recordsInTable{$i}/$recordsInDatabase;"##0.00")).join("\t"))
+	String($size);\
+	String($recordsInTable{$i}/$recordsInDatabase;"##0.00")\
+	).join("\t"))
 End for 
 
 SET TEXT TO PASTEBOARD($results.join("\r"))
