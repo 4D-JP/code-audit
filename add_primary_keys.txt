@@ -51,13 +51,30 @@ If (OK=1)
 			" ADD TRAILING ["+$primaryKeyName+"] UUID AUTO_GENERATE PRIMARY KEY;"
 			
 			Begin SQL
-				  EXECUTE IMMEDIATE :$SQL;
+				EXECUTE IMMEDIATE :$SQL;
 			End SQL
 			
 			If (OK=1)
 				$logMessage:=String($TABLE_IDS{$i})+"\t"+$TABLE_NAMES{$i}+"\t"+$primaryKeyName+"\n"
 				SEND PACKET($logFileDocRef;$logMessage)
 			End if 
+			
+			
+			$TABLE_ID:=$TABLE_IDS{$i}
+			$COLUMN_ID:=0
+			
+			Begin SQL
+				SELECT _USER_CONS_COLUMNS.COLUMN_ID
+				FROM _USER_CONSTRAINTS,_USER_CONS_COLUMNS
+				WHERE CONSTRAINT_TYPE = 'P'
+				AND _USER_CONS_COLUMNS.TABLE_ID = :$TABLE_ID
+				AND _USER_CONS_COLUMNS.CONSTRAINT_ID = _USER_CONSTRAINTS.CONSTRAINT_ID
+				INTO :$COLUMN_ID;
+			End SQL
+			
+			$f:=Field($TABLE_ID;$COLUMN_ID)
+			ALL RECORDS(Table($TABLE_ID)->)
+			APPLY TO SELECTION(Table($TABLE_ID)->;$f->:=Generate UUID)
 			
 		End for 
 		
@@ -72,7 +89,7 @@ If (OK=1)
 			" ON ["+$TABLE_NAMES{$i}+"] ("+"["+$primaryKeyName+"]);"
 			
 			Begin SQL
-				  EXECUTE IMMEDIATE :$SQL;
+				EXECUTE IMMEDIATE :$SQL;
 			End SQL
 			
 			If (OK=1)
