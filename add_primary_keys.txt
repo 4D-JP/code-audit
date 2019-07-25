@@ -3,7 +3,7 @@ $logFileName:="add_primary_key"
 $logFileSuffix:=".log"
 $logFileIndex:=0
 
-$primaryKeyName:="PK_UUID"
+$primaryKeyDefaultName:="PK_UUID"
 
 $logPath:=$logFolder+$logFileName+$logFileSuffix
 While (Test path name($logPath)=Is a document))
@@ -43,11 +43,30 @@ If (OK=1)
 		$logMessage:="\nadding primary keys...\n\n"
 		SEND PACKET($logFileDocRef;$logMessage)
 		
-		  //TODO: check for field name conflicts
-		
 		For ($i;1;Size of array($TABLE_IDS))
 			
-			$SQL:="ALTER TABLE "+"["+$TABLE_NAMES{$i}+"]"+\
+			$TABLE_ID:=$TABLE_IDS{$i}
+			$TABLE_NAME:=$TABLE_NAMES{$i}
+			
+			ARRAY TEXT($COLUMN_NAMES;0)
+			
+			Begin SQL
+				/* get field names */
+				SELECT COLUMN_NAME
+				FROM _USER_COLUMNS
+				WHERE TABLE_ID = :$TABLE_ID
+				INTO :$COLUMN_NAMES;
+			End SQL
+			
+			$primaryKeyIndex:=0
+			$primaryKeyName:=$primaryKeyDefaultName
+			
+			While (Find in array($COLUMN_NAMES;$primaryKeyName)#-1)
+				$primaryKeyIndex:=$primaryKeyIndex+1
+				$primaryKeyName:=$primaryKeyDefaultName+String($primaryKeyIndex)
+			End while 
+			
+			$SQL:="ALTER TABLE "+"["+$TABLE_NAME+"]"+\
 			" ADD TRAILING ["+$primaryKeyName+"] UUID AUTO_GENERATE PRIMARY KEY;"
 			
 			Begin SQL
@@ -55,47 +74,49 @@ If (OK=1)
 			End SQL
 			
 			If (OK=1)
-				$logMessage:=String($TABLE_IDS{$i})+"\t"+$TABLE_NAMES{$i}+"\t"+$primaryKeyName+"\n"
+				$logMessage:=String($TABLE_IDS{$i})+"\t"+$TABLE_NAME+"\t"+$primaryKeyName+"\n"
 				SEND PACKET($logFileDocRef;$logMessage)
 			End if 
 			
-			
-			$TABLE_ID:=$TABLE_IDS{$i}
-			$COLUMN_ID:=0
-			
-			Begin SQL
-				SELECT _USER_CONS_COLUMNS.COLUMN_ID
-				FROM _USER_CONSTRAINTS,_USER_CONS_COLUMNS
-				WHERE CONSTRAINT_TYPE = 'P'
-				AND _USER_CONS_COLUMNS.TABLE_ID = :$TABLE_ID
-				AND _USER_CONS_COLUMNS.CONSTRAINT_ID = _USER_CONSTRAINTS.CONSTRAINT_ID
-				INTO :$COLUMN_ID;
-			End SQL
-			
-			$f:=Field($TABLE_ID;$COLUMN_ID)
-			ALL RECORDS(Table($TABLE_ID)->)
-			APPLY TO SELECTION(Table($TABLE_ID)->;$f->:=Generate UUID)
-			
 		End for 
 		
-		$logMessage:="\nadding indexes...\n\n"
+		$logMessage:="\nadding values...\n\n"
 		SEND PACKET($logFileDocRef;$logMessage)
 		
 		For ($i;1;Size of array($TABLE_IDS))
 			
-			$indexName:=$TABLE_NAMES{$i}+"."+$primaryKeyName
+			$TABLE_ID:=$TABLE_IDS{$i}
+			$TABLE_NAME:=$TABLE_NAMES{$i}
+			$COLUMN_ID:=0
+			
+			$primaryKeyName:=""
+			
+			Begin SQL
+				SELECT _USER_CONS_COLUMNS.COLUMN_NAME,_USER_CONS_COLUMNS.COLUMN_ID
+				FROM _USER_CONSTRAINTS,_USER_CONS_COLUMNS
+				WHERE CONSTRAINT_TYPE = 'P'
+				AND _USER_CONS_COLUMNS.TABLE_ID = :$TABLE_ID
+				AND _USER_CONS_COLUMNS.CONSTRAINT_ID = _USER_CONSTRAINTS.CONSTRAINT_ID
+				INTO :$primaryKeyName,:$COLUMN_ID;
+			End SQL
+			
+			$field:=Field($TABLE_ID;$COLUMN_ID)
+			ALL RECORDS(Table($TABLE_ID)->)
+			$length:=Records in table(Table($TABLE_ID)->)
+			
+			APPLY TO SELECTION(Table($TABLE_ID)->;$field->:=Generate UUID)
+			
+			$logMessage:=String($TABLE_IDS{$i})+"\t"+$TABLE_NAME+"\t"+$primaryKeyName+"\t"+String($length)+"\n"
+			SEND PACKET($logFileDocRef;$logMessage)
+			
+			$indexName:=$TABLE_NAME+"."+$primaryKeyName
 			
 			$SQL:="CREATE UNIQUE INDEX "+"["+$indexName+"]"+\
-			" ON ["+$TABLE_NAMES{$i}+"] ("+"["+$primaryKeyName+"]);"
+			" ON ["+$TABLE_NAME+"] ("+"["+$primaryKeyName+"]);"
 			
 			Begin SQL
 				EXECUTE IMMEDIATE :$SQL;
 			End SQL
-			
-			If (OK=1)
-				$logMessage:=String($TABLE_IDS{$i})+"\t"+$TABLE_NAMES{$i}+"\t"+$indexName+"\n"
-				SEND PACKET($logFileDocRef;$logMessage)
-			End if 
 			
 		End for 
 		
