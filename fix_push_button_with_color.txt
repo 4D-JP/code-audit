@@ -35,109 +35,124 @@ Until ($imagesFolderPath#"")
 CREATE FOLDER($imagesFolderPath;*)
 
 $template:=""
-$svg:=DOM Create XML Ref("svg";"http://www.w3.org/2000/svg";"xmlns:xlink";"http://www.w3.org/1999/xlink")
-DOM SET XML ATTRIBUTE($svg;"version";"1.1";"width";"$4DTEXT($1.strokeWidth+$1.width)";"height";"$4DTEXT(($1.strokeWidth*4)+($1.height*4))")
-$defs:=DOM Create XML element($svg;"defs";"id";"defs")
-$filter:=DOM Create XML element($defs;"filter";"id";"filter-disabled")
-$feColorMatrix:=DOM Create XML element($filter;"feColorMatrix";\
-"type";"matrix";"values";\
-".299 .587 .114 0 0 "+\
-".299 .587 .114 0 0 "+\
-".299 .587 .114 0 0 "+\
-".000 .000 .000 1 .000")
-$filter:=DOM Create XML element($defs;"filter";"id";"filter-hover")
-$feColorMatrix:=DOM Create XML element($filter;"feColorMatrix";\
-"type";"matrix";"values";\
-".888 0 0 0 0 0 "+\
-".888 0 0 0 0 0 "+\
-".888 0 0 0 0 0 "+\
-"1 .000")
-$filter:=DOM Create XML element($defs;"filter";"id";"filter-clicked")
-$feColorMatrix:=DOM Create XML element($filter;"feColorMatrix";\
-"type";"matrix";"values";\
-".777 0 0 0 0 0 "+\
-".777 0 0 0 0 0 "+\
-".777 0 0 0 0 0 "+\
-"1 .000")
-$rect:=DOM Create XML element($defs;"rect";"id";"rect";\
-"width";"$4DTEXT($1.width)";"height";"$4DTEXT($1.height)";\
-"fill";"$4DTEXT($1.fill)";\
-"stroke";"$4DTEXT($1.stroke)";"stroke-width";"$4DTEXT($1.strokeWidth)";\
-"rx";"$4DTEXT($1.rx)";"ry";"$4DTEXT($1.ry)")
-$rect:=DOM Create XML element($svg;"use";"href";"#rect";\
-"x";"$4DTEXT($1.strokeWidth/2)";"y";"$4DTEXT($1.strokeWidth/2)")
-$rect:=DOM Create XML element($svg;"use";"href";"#rect";\
-"filter";"url(#filter-clicked)";\
-"x";"$4DTEXT($1.strokeWidth/2)";"y";"$4DTEXT(($1.strokeWidth*1.5)+($1.height))")
-$rect:=DOM Create XML element($svg;"use";"href";"#rect";\
-"filter";"url(#filter-hover)";\
-"x";"$4DTEXT($1.strokeWidth/2)";"y";"$4DTEXT(($1.strokeWidth*2.5)+($1.height*2))")
-$rect:=DOM Create XML element($svg;"use";"href";"#rect";\
-"filter";"url(#filter-disabled)";\
-"x";"$4DTEXT($1.strokeWidth/2)";"y";"$4DTEXT(($1.strokeWidth*3.5)+($1.height*3))")
-DOM EXPORT TO VAR($svg;$template)
-DOM CLOSE XML($svg)
+If (True)
+	$svg:=DOM Create XML Ref("svg";"http://www.w3.org/2000/svg";"xmlns:xlink";"http://www.w3.org/1999/xlink")
+	DOM SET XML ATTRIBUTE($svg;"version";"1.1";"width";"$4DTEXT($1.strokeWidth+$1.width)";"height";"$4DTEXT(($1.strokeWidth*4)+($1.height*4))")
+	$defs:=DOM Create XML element($svg;"defs";"id";"defs")
+	$filter:=DOM Create XML element($defs;"filter";"id";"filter-disabled")
+	$feColorMatrix:=DOM Create XML element($filter;"feColorMatrix";\
+	"type";"matrix";"values";\
+	".299 .587 .114 0 0 "+\
+	".299 .587 .114 0 0 "+\
+	".299 .587 .114 0 0 "+\
+	".000 .000 .000 1 .000")
+	$filter:=DOM Create XML element($defs;"filter";"id";"filter-hover")
+	$feColorMatrix:=DOM Create XML element($filter;"feColorMatrix";\
+	"type";"matrix";"values";\
+	".888 0 0 0 0 0 "+\
+	".888 0 0 0 0 0 "+\
+	".888 0 0 0 0 0 "+\
+	"1 .000")
+	$filter:=DOM Create XML element($defs;"filter";"id";"filter-clicked")
+	$feColorMatrix:=DOM Create XML element($filter;"feColorMatrix";\
+	"type";"matrix";"values";\
+	".777 0 0 0 0 0 "+\
+	".777 0 0 0 0 0 "+\
+	".777 0 0 0 0 0 "+\
+	"1 .000")
+	$rect:=DOM Create XML element($defs;"rect";"id";"rect";\
+	"width";"$4DTEXT($1.width)";"height";"$4DTEXT($1.height)";\
+	"fill";"$4DTEXT($1.fill)";\
+	"stroke";"$4DTEXT($1.stroke)";"stroke-width";"$4DTEXT($1.strokeWidth)";\
+	"rx";"$4DTEXT($1.rx)";"ry";"$4DTEXT($1.ry)")
+	$rect:=DOM Create XML element($svg;"use";"href";"#rect";\
+	"x";"$4DTEXT($1.strokeWidth/2)";"y";"$4DTEXT($1.strokeWidth/2)")
+	$rect:=DOM Create XML element($svg;"use";"href";"#rect";\
+	"filter";"url(#filter-clicked)";\
+	"x";"$4DTEXT($1.strokeWidth/2)";"y";"$4DTEXT(($1.strokeWidth*1.5)+($1.height))")
+	$rect:=DOM Create XML element($svg;"use";"href";"#rect";\
+	"filter";"url(#filter-hover)";\
+	"x";"$4DTEXT($1.strokeWidth/2)";"y";"$4DTEXT(($1.strokeWidth*2.5)+($1.height*2))")
+	$rect:=DOM Create XML element($svg;"use";"href";"#rect";\
+	"filter";"url(#filter-disabled)";\
+	"x";"$4DTEXT($1.strokeWidth/2)";"y";"$4DTEXT(($1.strokeWidth*3.5)+($1.height*3))")
+	DOM EXPORT TO VAR($svg;$template)
+	DOM CLOSE XML($svg)
+End if 
 
-ARRAY TEXT($formNames;0)
-For ($t;0;Get last table number)
-	If (Is table number valid($t)) | ($t=0)
-		If ($t#0)
-			FORM GET NAMES(Table($t)->;$formNames;*)
-		Else 
-			FORM GET NAMES($formNames;*)
-		End if 
-		For ($f;1;Size of array($formNames))
-			$formName:=$formNames{$f}
+$signature:="  // code added by "+Current method name+"\r"
+If (True)
+	ARRAY TEXT($formNames;0)
+	For ($t;0;Get last table number)
+		If (Is table number valid($t)) | ($t=0)
 			If ($t#0)
-				FORM LOAD(Table($t)->;$formName;*)
-				$methodPath:=METHOD Get path(Path table form;Table($t)->;$formName;*)
+				FORM GET NAMES(Table($t)->;$formNames;*)
 			Else 
-				FORM LOAD($formName;*)
-				$methodPath:=METHOD Get path(Path project form;$formName;*)
+				FORM GET NAMES($formNames;*)
 			End if 
-			FORM GET OBJECTS($objectNames;*)
-			$code:=""
-			ON ERR CALL("err_method_get_code")
-			METHOD GET CODE($methodPath;$code;Code with tokens;*)
-			ON ERR CALL("")
-			$code:=$code+"\r"
-			$code:=$code+"If (Form event:C388=On Load:K2:1)\r"
-			For ($o;1;Size of array($objectNames))
-				$objectName:=$objectNames{$o}
-				$objectType:=OBJECT Get type(*;$objectName)
-				Case of 
-					: ($objectType=Object type push button)
-						C_LONGINT($strokeColor;$fillColor;$left;$top;$right;$bottom)
-						OBJECT GET RGB COLORS(*;$objectName;$strokeColor;$fillColor)
-						OBJECT GET COORDINATES(*;$objectName;$left;$top;$right;$bottom)
-						$x:=$left
-						$y:=$top
-						$width:=$right-$left
-						$height:=$bottom-$top
-						$fill:="000000"+Substring(String($fillColor;"&x");3)
-						$fill:="#"+Substring($fill;Length($fill)-5)
-						$stroke:="000000"+Substring(String($strokeColor;"&x");3)
-						$stroke:="#"+Substring($stroke;Length($stroke)-5)
-						$params:=New object("width";$width;\
-						"height";$height;\
-						"fill";$fill;"stroke";$stroke;\
-						"strokeWidth";2;"rx";5;"ry";5)
-						PROCESS 4D TAGS($template;$svg;$params)
-						If ($t=0)
-							$tableName:="{projectForm}"
-						Else 
-							$tableName:=Table name($t)
-						End if 
-						$path:=$imagesFolderPath+$tableName+Folder separator+$objectName+".svg"
-						TEXT TO DOCUMENT($path;$svg;"utf-8";Document with CRLF)
-						$format:=OBJECT Get format(*;$objectName)
-						$format:="\""+$format+";#;#"+$imagesFolderName+"/"+$tableName+"/"+$objectName+".svg;;1;0;4;;;;;;1"+"\""
-						$code:=$code+"OBJECT SET FORMAT:C236(*;\""+$objectName+"\";"+$format+")\r"
-				End case 
+			For ($f;1;Size of array($formNames))
+				$formName:=$formNames{$f}
+				If ($t#0)
+					FORM LOAD(Table($t)->;$formName;*)
+					$methodPath:=METHOD Get path(Path table form;Table($t)->;$formName;*)
+				Else 
+					FORM LOAD($formName;*)
+					$methodPath:=METHOD Get path(Path project form;$formName;*)
+				End if 
+				FORM GET OBJECTS($objectNames;*)
+				$code:=""
+				
+				METHOD GET CODE($methodPath;$code;Code with tokens;*)
+				
+				$addCode:=(0=Position($signature;$code;*))
+				$codeSnippet:=""
+				If ($addCode)
+					$codeSnippet:=$signature
+					$codeSnippet:=$codeSnippet+"If (Form event:C388=On Load:K2:1)\r"
+				End if 
+				For ($o;1;Size of array($objectNames))
+					$objectName:=$objectNames{$o}
+					$objectType:=OBJECT Get type(*;$objectName)
+					Case of 
+						: ($objectType=Object type push button)
+							C_LONGINT($strokeColor;$fillColor;$left;$top;$right;$bottom)
+							OBJECT GET RGB COLORS(*;$objectName;$strokeColor;$fillColor)
+							OBJECT GET COORDINATES(*;$objectName;$left;$top;$right;$bottom)
+							$x:=$left
+							$y:=$top
+							$width:=$right-$left
+							$height:=$bottom-$top
+							$fill:="000000"+Substring(String($fillColor;"&x");3)
+							$fill:="#"+Substring($fill;Length($fill)-5)
+							$stroke:="000000"+Substring(String($strokeColor;"&x");3)
+							$stroke:="#"+Substring($stroke;Length($stroke)-5)
+							$params:=New object("width";$width;\
+							"height";$height;\
+							"fill";$fill;"stroke";$stroke;\
+							"strokeWidth";2;"rx";5;"ry";5)
+							PROCESS 4D TAGS($template;$svg;$params)
+							If ($t=0)
+								$tableName:="{projectForm}"
+							Else 
+								$tableName:=Table name($t)
+							End if 
+							$path:=$imagesFolderPath+$tableName+Folder separator+$objectName+".svg"
+							TEXT TO DOCUMENT($path;$svg;"utf-8";Document with CRLF)
+							If ($addCode)
+								$format:=OBJECT Get format(*;$objectName)
+								$format:="\""+$format+";#;#"+$imagesFolderName+"/"+$tableName+"/"+$objectName+".svg;;1;0;4;;;;;;1"+"\""
+								$codeSnippet:=$codeSnippet+"OBJECT SET FORMAT:C236(*;\""+$objectName+"\";"+$format+")\r"
+							End if 
+					End case 
+				End for 
+				If ($addCode)
+					$codeSnippet:=$code+"\r"+$codeSnippet+"End if\r"
+					
+					METHOD SET CODE($methodPath;$codeSnippet;*)
+					
+				End if 
+				FORM UNLOAD
 			End for 
-			$code:=$code+"End if\r"
-			METHOD SET CODE($methodPath;$code;*)
-			FORM UNLOAD
-		End for 
-	End if 
-End for 
+		End if 
+	End for 
+End if 
