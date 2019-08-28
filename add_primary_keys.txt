@@ -126,7 +126,7 @@ If (OK=1)
 						$logMessage:=String($lockedRecords{$j})+"\n"
 						SEND PACKET($logFileDocRef;$logMessage)
 					End for 
-				end if
+				End if 
 				
 				If (Num(Substring(Application version;1;2))>13)
 					$SQL:="ALTER TABLE "+"["+$TABLE_NAME+"] ENABLE LOG;"
@@ -145,6 +145,39 @@ If (OK=1)
 		End if 
 		
 	End for 
+	
+	If (Num(Substring(Application version;1;2))<14)
+		
+		For ($i;1;Size of array($TABLE_IDS))
+			
+			$logMessage:="adding primary keys...\n"
+			SEND PACKET($logFileDocRef;$logMessage)
+			
+			$TABLE_ID:=$TABLE_IDS{$i}
+			
+			$primaryKeyName:=""
+			
+			Begin SQL
+				SELECT _USER_CONS_COLUMNS.COLUMN_NAME
+				FROM _USER_CONSTRAINTS,_USER_CONS_COLUMNS
+				WHERE CONSTRAINT_TYPE = 'P'
+				AND _USER_CONS_COLUMNS.TABLE_ID = :$TABLE_ID
+				AND _USER_CONS_COLUMNS.CONSTRAINT_ID = _USER_CONSTRAINTS.CONSTRAINT_ID
+				INTO :$primaryKeyName;
+			End SQL
+			
+			$indexName:=$TABLE_NAME+"."+$primaryKeyName
+			
+			$SQL:="CREATE UNIQUE INDEX "+"["+$indexName+"]"+\
+			" ON ["+$TABLE_NAME+"] ("+"["+$primaryKeyName+"]);"
+			
+			Begin SQL
+				EXECUTE IMMEDIATE :$SQL;
+			End SQL
+			
+		End for
+		
+	end if
 	
 	USE CHARACTER SET(*)
 	CLOSE DOCUMENT($logFileDocRef)
