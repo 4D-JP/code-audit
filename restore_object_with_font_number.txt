@@ -1,0 +1,78 @@
+$continue:=True
+
+If (Version type ?? 64 bit version)
+	CONFIRM("not 32-bit! continue?")
+	$continue:=(OK=1)
+End if 
+
+If ($continue)
+	
+	C_COLLECTION($paths)
+	C_OBJECT($path)
+	C_TEXT($methodPath;$formName;$objectName)
+	
+	C_LONGINT($t;$f;$o)  //iterator for tables,forms,objects
+	ARRAY TEXT($formNames;0)
+	ARRAY TEXT($objectNames;0)
+	
+	$paths:=New collection
+	
+	For ($t;0;Get last table number)
+		If (Is table number valid($t)) | ($t=0)
+			If ($t#0)
+				FORM GET NAMES(Table($t)->;$formNames;*)
+			Else 
+				FORM GET NAMES($formNames;*)
+			End if 
+			For ($f;1;Size of array($formNames))
+				$path:=New object
+				$formName:=$formNames{$f}
+				If ($t#0)
+					FORM LOAD(Table($t)->;$formName;*)
+					$methodPath:=METHOD Get path(Path table form;Table($t)->;$formName;*)
+				Else 
+					FORM LOAD($formName;*)
+					$methodPath:=METHOD Get path(Path project form;$formName;*)
+				End if 
+				FORM GET OBJECTS($objectNames;*)
+				For ($o;1;Size of array($objectNames))
+					$objectName:=$objectNames{$o}
+					$stylesheetName:=OBJECT Get style sheet(*;$objectName)
+					If ($stylesheetName="")
+						$path.path:=$methodPath
+						$path.objects:=New object
+						$path.objects[$objectName]:=New object("fontFamily";OBJECT Get font(*;$objectName))
+					End if 
+				End for 
+				If (Not(OB Is empty($path)))
+					$paths.push($path)
+				End if 
+				FORM UNLOAD
+			End for 
+		End if 
+	End for 
+	
+	$signature:="  // code added by "+Current method name+"\r"
+	For each ($path;$paths)
+		
+		$code:=""
+		
+		METHOD GET CODE($path.path;$code;Code with tokens;*)
+		$addCode:=(0=Position($signature;$code;*))
+		$codeSnippet:=""
+		If ($addCode)
+			$codeSnippet:=$signature
+			$codeSnippet:=$codeSnippet+"If (Form event:C388=On Load:K2:1) | (Form event:C388=On Header:K2:17) | (Form event:C388=On Printing Detail:K2:18) | (Form event:C388=On Printing Break:K2:19) | (Form event:C388=On Printing Footer:K2:20)\r"
+			For each ($objectName;$path.objects)
+				$codeSnippet:=$codeSnippet+"OBJECT SET FONT:C164(*;\""+$objectName+"\";\""+$path.objects[$objectName].fontFamily+"\")\r"
+			End for each 
+			
+			$codeSnippet:=$code+"\r"+$codeSnippet+"End if\r"
+			
+			METHOD SET CODE($path.path;$codeSnippet;*)
+			
+		End if 
+		
+	End for each 
+	
+End if 
