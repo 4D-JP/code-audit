@@ -137,6 +137,7 @@ If (True)
 								$tableName:=Table name($t)
 							End if 
 							$path:=$imagesFolderPath+$tableName+Folder separator+$objectName+".svg"
+							CREATE FOLDER($imagesFolderPath+$tableName+Folder separator;*)
 							TEXT TO DOCUMENT($path;$svg;"utf-8";Document with CRLF)
 							If ($addCode)
 								$format:=OBJECT Get format(*;$objectName)
