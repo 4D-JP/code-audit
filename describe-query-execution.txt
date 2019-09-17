@@ -6,7 +6,7 @@ C_LONGINT($i)
 For each ($i;$queryCommands)
 	$command:=Command name($i)
 	If ($command#"") & ($command#"_4D")
-		$commands[String($i)]:=New object("name";$command)
+		$commands[String($i)]:=New object("name";$command;"id";$i)
 	End if 
 End for each 
 
@@ -19,10 +19,10 @@ METHOD GET PATHS(Path all objects;$methods)
 $token:="([[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]))"
 $id:=":C(\\d{1,4})"
 $motif:="("+$token+$id+")"
-$field:="(\\[[[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5}\\][[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5})"
-$date:="!\\d+[-./]\\d+[-./]\\d+!"
-$time:="\\?\\d+:\\d+:\\d+\\?"
-$string:="\"[^\"]*\""
+  //$field:="(\\[[[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5}\\][[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5})"
+  //$date:="!\\d+[-./]\\d+[-./]\\d+!"
+  //$time:="\\?\\d+:\\d+:\\d+\\?"
+  //$string:="\"[^\"]*\""
 $table:="(\\[[[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5}\\])"
 
 $queries:=New collection
@@ -50,9 +50,10 @@ For ($m;1;Size of array($methods))
 						If ($command_o#Null)
 							If ($command_o.name=$command_name)
 								$parsedLine:=$line
-								If (Match regex("\\(([^;]+)";$line;1;$pos;$len))
-									$param:=Substring($line;$pos{1};$len{1})
-									If (Match regex($table;$param))
+								If (Match regex("\\(([^;]+)((?:.+?)(?:;\\*)?(?:\\)))";$line;1;$pos;$len))
+									$tableToken:=Substring($line;$pos{1};$len{1})
+									$ConditionToken:=Substring($line;$pos{2};$len{2})
+									If (Match regex($table;$tableToken))
 										If (Match regex("(?:=|#|<|>|%|<=|>=)(.+?)(?:;\\*)?(?:\\))";$line;1;$pos;$len))
 											$operand:=Substring($line;$pos{1};$len{1})
 											$lineBefore:=Substring($line;1;$pos{1}-1)
@@ -62,35 +63,38 @@ For ($m;1;Size of array($methods))
 											$parsedLine:=$lineBefore+$operand+$lineAfter
 										End if 
 										$isOpen:=Match regex(";\\*\\)(?:\\s*//.*)?";$line;1;$pos;$len)
+										$html:="<p class=\"code\"><span class=\"command\">"+$command_o.name+"</span>("+\
+										"<span class=\"table\">"+Parse formula($tableToken)+"</span>"+\
+										Parse formula($ConditionToken)+"</p>"
 										Case of 
 											: (Not($isOpen)) & (Not($ctx.isOpen))
-												$q:=New object("param";$param;\
-												"command";Num($command);\
+												$q:=New object(\
+												"command";$command_o;\
 												"method";$method;\
-												"code";New collection(New object("raw";$line;"cajoled";$parsedLine)))
+												"code";New collection(New object("raw";$line;"cajoled";$parsedLine;"html";$html)))
 												Case of 
-													: (Num($command)=341)
-														$starter:="ALL RECORDS:C47("+$param+")\r"
+													: ($command_o.id=341)
+														$starter:="ALL RECORDS:C47("+$tableToken+")\r"
 														$q.code.unshift(New object("cajoled";$starter))
 												End case 
 												$queries.push($q)
 											: ($isOpen) & (Not($ctx.isOpen))
 												$ctx.isOpen:=True
-												$ctx.lines:=New collection(New object("raw";$line;"cajoled";$parsedLine))
+												$ctx.lines:=New collection(New object("raw";$line;"cajoled";$parsedLine;"html";$html))
 											: (Not($isOpen)) & ($ctx.isOpen)
-												$q:=New object("param";$param;\
-												"command";Num($command);\
+												$q:=New object(\
+												"command";$command_o;\
 												"method";$method;\
-												"code";$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine)))
+												"code";$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine;"html";$html)))
 												Case of 
-													: (Num($command)=341)
-														$starter:="ALL RECORDS:C47("+$param+")\r"
+													: ($command_o.id=341)
+														$starter:="ALL RECORDS:C47("+$tableToken+")\r"
 														$q.code.unshift(New object("cajoled";$starter))
 												End case 
 												$queries.push($q)
 												$ctx.isOpen:=False
 											: ($isOpen) & ($ctx.isOpen)
-												$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine))
+												$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine;"html";$html))
 										End case 
 									End if 
 								End if 
@@ -118,13 +122,21 @@ End for each
 $log:=""
 
 For each ($query;$queries)
-	$log:=$log+$query.method+"\r"
-	$log:=$log+"```\r"
-	For each ($code;$query.code.extract("raw"))
-		$log:=$log+Parse formula($code)+"\r"
+	$log:=$log+"<p><span class=\"method\">"+$query.method+"</span></p>\r"
+	$log:=$log+"<hr />\r"
+	For each ($html;$query.code.extract("html"))
+		$log:=$log+Parse formula($html)+"\r"
 	End for each 
-	$log:=$log+"```\r"
-	$log:=$log+$query.plan+"\r"
+	$log:=$log+"<pre>\r"+$query.plan+"</pre>\r"
+	$log:=$log+"<hr />\r"
 End for each 
+
+$head:="<head>\r<style>\rp.code{font-size:13px;font-family:sans-serif;color:#999;}\r"+\
+"span.command{font-size:13px;font-family:sans-serif;font-weight:bold;color:#050;}\r"+\
+"span.table{font-size:13px;font-family:sans-serif;color:#835C3B;}\r"+\
+"span.method{font-size:13px;font-family:sans-serif;font-weight:bold;font-style:italic;color:#005;}\r"+\
+"</style>\r</head>\r"
+
+$log:="<html>\r"+$head+"<body>\r"+$log+"</body>\r</html>"
 
 SET TEXT TO PASTEBOARD($log)
