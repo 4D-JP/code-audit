@@ -50,14 +50,10 @@ For ($m;1;Size of array($methods))
 						If ($command_o#Null)
 							If ($command_o.name=$command_name)
 								$parsedLine:=$line
-								
 								If (Match regex("\\(([^;]+)";$line;1;$pos;$len))
-									
 									$param:=Substring($line;$pos{1};$len{1})
-									
 									If (Match regex($table;$param))
-										
-										If (Match regex("[=#<>%]+(.+)(?:;\\*)?(?:\\))";$line;1;$pos;$len))
+										If (Match regex("(?:=|#|<|>|%|<=|>=)(.+)(?:;\\*)?(?:\\))";$line;1;$pos;$len))
 											$operand:=Substring($line;$pos{1};$len{1})
 											$lineBefore:=Substring($line;1;$pos{1}-1)
 											$lineAfter:=Substring($line;$pos{1}+$len{1})
@@ -68,19 +64,36 @@ For ($m;1;Size of array($methods))
 										$isOpen:=Match regex(";\\*\\)(?:\\s*//.*)?";$line;1;$pos;$len)
 										Case of 
 											: (Not($isOpen)) & (Not($ctx.isOpen))
-												$queries.push(New object("method";$method;"code";New collection(New object("raw";$line;"cajoled";$parsedLine))))
+												$q:=New object("param";$param;\
+												"command";Num($command);\
+												"method";$method;\
+												"code";New collection(New object("raw";$line;"cajoled";$parsedLine)))
+												Case of 
+													: (Num($command)=341)
+														$starter:="ALL RECORDS:C47("+$param+")\r"
+														$q.code.unshift(New object("cajoled";$starter))
+												End case 
+												$queries.push($q)
 											: ($isOpen) & (Not($ctx.isOpen))
 												$ctx.isOpen:=True
 												$ctx.lines:=New collection(New object("raw";$line;"cajoled";$parsedLine))
 											: (Not($isOpen)) & ($ctx.isOpen)
-												$queries.push(New object("method";$method;"code";$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine))))
+												$q:=New object("param";$param;\
+												"command";Num($command);\
+												"method";$method;\
+												"code";$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine)))
+												Case of 
+													: (Num($command)=341)
+														$starter:="ALL RECORDS:C47("+$param+")\r"
+														$q.code.unshift(New object("cajoled";$starter))
+												End case 
+												$queries.push($q)
 												$ctx.isOpen:=False
 											: ($isOpen) & ($ctx.isOpen)
 												$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine))
 										End case 
-										
 									End if 
-								end if
+								End if 
 							End if 
 						End if 
 					End while 
