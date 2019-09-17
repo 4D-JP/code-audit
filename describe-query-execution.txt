@@ -23,6 +23,7 @@ $field:="(\\[[[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5}\\][[:
 $date:="!\\d+[-./]\\d+[-./]\\d+!"
 $time:="\\?\\d+:\\d+:\\d+\\?"
 $string:="\"[^\"]*\""
+$table:="(\\[[[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5}\\])"
 
 $queries:=New collection
 
@@ -49,27 +50,37 @@ For ($m;1;Size of array($methods))
 						If ($command_o#Null)
 							If ($command_o.name=$command_name)
 								$parsedLine:=$line
-								If (Match regex("[=#<>%]+(.+)(?:;\\*)?(?:\\))";$line;1;$pos;$len))
-									$operand:=Substring($line;$pos{1};$len{1})
-									$lineBefore:=Substring($line;1;$pos{1}-1)
-									$lineAfter:=Substring($line;$pos{1}+$len{1})
-									  //escape parameters, variables and methods
-									$operand:="\""+Replace string($operand;"\"";"\\\"";*)+"\""
-									$parsedLine:=$lineBefore+$operand+$lineAfter
-								End if 
-								$isOpen:=Match regex(";\\*\\)(?:\\s*//.*)?";$line;1;$pos;$len)
-								Case of 
-									: (Not($isOpen)) & (Not($ctx.isOpen))
-										$queries.push(New object("method";$method;"code";New collection(New object("raw";$line;"cajoled";$parsedLine))))
-									: ($isOpen) & (Not($ctx.isOpen))
-										$ctx.isOpen:=True
-										$ctx.lines:=New collection(New object("raw";$line;"cajoled";$parsedLine))
-									: (Not($isOpen)) & ($ctx.isOpen)
-										$queries.push(New object("method";$method;"code";$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine))))
-										$ctx.isOpen:=False
-									: ($isOpen) & ($ctx.isOpen)
-										$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine))
-								End case 
+								
+								If (Match regex("\\(([^;]+)";$line;1;$pos;$len))
+									
+									$param:=Substring($line;$pos{1};$len{1})
+									
+									If (Match regex($table;$param))
+										
+										If (Match regex("[=#<>%]+(.+)(?:;\\*)?(?:\\))";$line;1;$pos;$len))
+											$operand:=Substring($line;$pos{1};$len{1})
+											$lineBefore:=Substring($line;1;$pos{1}-1)
+											$lineAfter:=Substring($line;$pos{1}+$len{1})
+											  //escape parameters, variables and methods
+											$operand:="\""+Replace string($operand;"\"";"\\\"";*)+"\""
+											$parsedLine:=$lineBefore+$operand+$lineAfter
+										End if 
+										$isOpen:=Match regex(";\\*\\)(?:\\s*//.*)?";$line;1;$pos;$len)
+										Case of 
+											: (Not($isOpen)) & (Not($ctx.isOpen))
+												$queries.push(New object("method";$method;"code";New collection(New object("raw";$line;"cajoled";$parsedLine))))
+											: ($isOpen) & (Not($ctx.isOpen))
+												$ctx.isOpen:=True
+												$ctx.lines:=New collection(New object("raw";$line;"cajoled";$parsedLine))
+											: (Not($isOpen)) & ($ctx.isOpen)
+												$queries.push(New object("method";$method;"code";$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine))))
+												$ctx.isOpen:=False
+											: ($isOpen) & ($ctx.isOpen)
+												$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine))
+										End case 
+										
+									End if 
+								end if
 							End if 
 						End if 
 					End while 
