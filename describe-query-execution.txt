@@ -50,7 +50,7 @@ For ($m;1;Size of array($methods))
 						If ($command_o#Null)
 							If ($command_o.name=$command_name)
 								$parsedLine:=$line
-								If (Match regex("\\(([^;]+)((?:.+?)(?:;\\*)?(?:\\)))";$line;1;$pos;$len))
+								If (Match regex("\\(([^;]+\\])(;(?:.+?)(?:;\\*)?(?:\\)))";$line;1;$pos;$len))
 									$tableToken:=Substring($line;$pos{1};$len{1})
 									$ConditionToken:=Substring($line;$pos{2};$len{2})
 									If (Match regex($table;$tableToken))
@@ -138,5 +138,9 @@ $head:="<head>\r<style>\rp.code{font-size:13px;font-family:sans-serif;color:#999
 "</style>\r</head>\r"
 
 $log:="<html>\r"+$head+"<body>\r"+$log+"</body>\r</html>"
+
+$path:=System folder(Desktop)+"plans.html"
+
+TEXT TO DOCUMENT($path;$log;"utf-8")
 
 SET TEXT TO PASTEBOARD($log)
