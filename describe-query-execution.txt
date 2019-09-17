@@ -1,0 +1,106 @@
+  //QUERY,QUERY SELECTION 
+$queryCommands:=New collection(277;341)
+
+$commands:=New object
+C_LONGINT($i)
+For each ($i;$queryCommands)
+	$command:=Command name($i)
+	If ($command#"") & ($command#"_4D")
+		$commands[String($i)]:=New object("name";$command)
+	End if 
+End for each 
+
+ARRAY TEXT($command_names;0)
+OB GET PROPERTY NAMES($commands;$command_names)
+$total:=Size of array($command_names)
+
+METHOD GET PATHS(Path all objects;$methods)
+
+$token:="([[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]))"
+$id:=":C(\\d{1,4})"
+$motif:="("+$token+$id+")"
+$field:="(\\[[[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5}\\][[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5})"
+$date:="!\\d+[-./]\\d+[-./]\\d+!"
+$time:="\\?\\d+:\\d+:\\d+\\?"
+$string:="\"[^\"]*\""
+
+$queries:=New collection
+
+For ($m;1;Size of array($methods))
+	$method:=$methods{$m}
+	If (Current method path#$method)
+		$ctx:=New object("lines";Null;"isOpen";False)
+		METHOD GET CODE($method;code;Code with tokens)
+		$lines:=Split string(code;"\r";sk trim spaces)
+		$lines.shift()  //remove meta
+		For each ($line;$lines)
+			Case of 
+				: (Match regex("\\s*";$line))  //blank line
+				: (Match regex("^//.*";$line))  //comment line
+				Else 
+					$i:=1
+					ARRAY LONGINT($pos;0)
+					ARRAY LONGINT($len;0)
+					While (Match regex($motif;$line;$i;$pos;$len))
+						$command:=Substring($line;$pos{3};$len{3})
+						$command_name:=Substring($line;$pos{2};$len{2})
+						$command_o:=$commands[$command]
+						$i:=$pos{1}+$len{1}
+						If ($command_o#Null)
+							If ($command_o.name=$command_name)
+								$parsedLine:=$line
+								If (Match regex("[=#<>%]+(.+)(?:;\\*)?(?:\\))";$line;1;$pos;$len))
+									$operand:=Substring($line;$pos{1};$len{1})
+									$lineBefore:=Substring($line;1;$pos{1}-1)
+									$lineAfter:=Substring($line;$pos{1}+$len{1})
+									  //escape parameters, variables and methods
+									$operand:="\""+Replace string($operand;"\"";"\\\"";*)+"\""
+									$parsedLine:=$lineBefore+$operand+$lineAfter
+								End if 
+								$isOpen:=Match regex(";\\*\\)(?:\\s*//.*)?";$line;1;$pos;$len)
+								Case of 
+									: (Not($isOpen)) & (Not($ctx.isOpen))
+										$queries.push(New object("method";$method;"code";New collection(New object("raw";$line;"cajoled";$parsedLine))))
+									: ($isOpen) & (Not($ctx.isOpen))
+										$ctx.isOpen:=True
+										$ctx.lines:=New collection(New object("raw";$line;"cajoled";$parsedLine))
+									: (Not($isOpen)) & ($ctx.isOpen)
+										$queries.push(New object("method";$method;"code";$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine))))
+										$ctx.isOpen:=False
+									: ($isOpen) & ($ctx.isOpen)
+										$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine))
+								End case 
+							End if 
+						End if 
+					End while 
+			End case 
+		End for each 
+	End if 
+End for 
+
+For each ($query;$queries)
+	$code:=$query.code.extract("cajoled").join("\r";ck ignore null or empty)
+	  //plan is always text format (no xml support)
+	$template:="<!--#4dcode\r"+\
+	"DESCRIBE QUERY EXECUTION:C1044(True:C214)\r"+$code+"\r"+\
+	"$path:=Get last query plan:C1046(Description in text format:K19:5)\r"+\
+	"DESCRIBE QUERY EXECUTION:C1044(False:C215)\r"+\
+	"-->$4deval($path)"
+	$plan:=""
+	PROCESS 4D TAGS($template;$plan)
+	$query.plan:=$plan
+End for each 
+
+$log:=""
+
+For each ($query;$queries)
+	$log:=$log+$query.method+"\r"
+	$log:=$log+"```\r"
+	For each ($code;$query.code.extract("raw"))
+		$log:=$log+Parse formula($code)+"\r"
+	End for each 
+	$log:=$log+"```\r"
+	$log:=$log+$query.plan+"\r"
+End for each 
+
+SET TEXT TO PASTEBOARD($log)
