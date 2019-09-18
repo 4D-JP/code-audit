@@ -1,3 +1,6 @@
+$USE_GENERIC_ARGUMENTS:=True
+$GROUP_BY_PLANS:=True
+
   //QUERY,QUERY SELECTION 
 $queryCommands:=New collection(277;341)
 
@@ -53,49 +56,59 @@ For ($m;1;Size of array($methods))
 								If (Match regex("\\(([^;]+\\])(;(?:.+?)(?:;\\*)?(?:\\)))";$line;1;$pos;$len))
 									$tableToken:=Substring($line;$pos{1};$len{1})
 									$ConditionToken:=Substring($line;$pos{2};$len{2})
+									$continue:=False
 									If (Match regex($table;$tableToken))
 										If (Match regex("(?:=|#|<|>|%|<=|>=)(.+?)(?:;\\*)?(?:\\))";$line;1;$pos;$len))
 											$operand:=Substring($line;$pos{1};$len{1})
 											$lineBefore:=Substring($line;1;$pos{1}-1)
 											$lineAfter:=Substring($line;$pos{1}+$len{1})
 											  //escape parameters, variables and methods
-											$operand:="\""+Replace string($operand;"\"";"\\\"";*)+"\""
+											If ($USE_GENERIC_ARGUMENTS)
+												$operand:="\"?\""
+											Else 
+												$operand:="\""+Replace string($operand;"\"";"\\\"";*)+"\""
+											End if 
 											$parsedLine:=$lineBefore+$operand+$lineAfter
+											$continue:=True
+										Else 
+											  //the operator is variable, ignore
 										End if 
-										$isOpen:=Match regex(";\\*\\)(?:\\s*//.*)?";$line;1;$pos;$len)
-										$html:="<p class=\"code\"><span class=\"command\">"+$command_o.name+"</span>("+\
-										"<span class=\"table\">"+Parse formula($tableToken)+"</span>"+\
-										Parse formula($ConditionToken)+"</p>"
-										Case of 
-											: (Not($isOpen)) & (Not($ctx.isOpen))
-												$q:=New object(\
-												"command";$command_o;\
-												"method";$method;\
-												"code";New collection(New object("raw";$line;"cajoled";$parsedLine;"html";$html)))
-												Case of 
-													: ($command_o.id=341)
-														$starter:="ALL RECORDS:C47("+$tableToken+")\r"
-														$q.code.unshift(New object("cajoled";$starter))
-												End case 
-												$queries.push($q)
-											: ($isOpen) & (Not($ctx.isOpen))
-												$ctx.isOpen:=True
-												$ctx.lines:=New collection(New object("raw";$line;"cajoled";$parsedLine;"html";$html))
-											: (Not($isOpen)) & ($ctx.isOpen)
-												$q:=New object(\
-												"command";$command_o;\
-												"method";$method;\
-												"code";$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine;"html";$html)))
-												Case of 
-													: ($command_o.id=341)
-														$starter:="ALL RECORDS:C47("+$tableToken+")\r"
-														$q.code.unshift(New object("cajoled";$starter))
-												End case 
-												$queries.push($q)
-												$ctx.isOpen:=False
-											: ($isOpen) & ($ctx.isOpen)
-												$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine;"html";$html))
-										End case 
+										If ($continue)
+											$isOpen:=Match regex(";\\*\\)(?:\\s*//.*)?";$line;1;$pos;$len)
+											$html:="<p class=\"code\"><span class=\"command\">"+$command_o.name+"</span>("+\
+											"<span class=\"table\">"+Parse formula($tableToken)+"</span>"+\
+											Parse formula($ConditionToken)+"</p>"
+											Case of 
+												: (Not($isOpen)) & (Not($ctx.isOpen))
+													$q:=New object(\
+													"command";$command_o;\
+													"method";$method;\
+													"code";New collection(New object("raw";$line;"cajoled";$parsedLine;"html";$html)))
+													Case of 
+														: ($command_o.id=341)
+															$starter:="ALL RECORDS:C47("+$tableToken+")\r"
+															$q.code.unshift(New object("cajoled";$starter))
+													End case 
+													$queries.push($q)
+												: ($isOpen) & (Not($ctx.isOpen))
+													$ctx.isOpen:=True
+													$ctx.lines:=New collection(New object("raw";$line;"cajoled";$parsedLine;"html";$html))
+												: (Not($isOpen)) & ($ctx.isOpen)
+													$q:=New object(\
+													"command";$command_o;\
+													"method";$method;\
+													"code";$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine;"html";$html)))
+													Case of 
+														: ($command_o.id=341)
+															$starter:="ALL RECORDS:C47("+$tableToken+")\r"
+															$q.code.unshift(New object("cajoled";$starter))
+													End case 
+													$queries.push($q)
+													$ctx.isOpen:=False
+												: ($isOpen) & ($ctx.isOpen)
+													$ctx.lines.push(New object("raw";$line;"cajoled";$parsedLine;"html";$html))
+											End case 
+										End if 
 									End if 
 								End if 
 							End if 
@@ -105,6 +118,10 @@ For ($m;1;Size of array($methods))
 		End for each 
 	End if 
 End for 
+
+C_OBJECT($plans)
+C_OBJECT($aPlan)
+$plans:=New object
 
 For each ($query;$queries)
 	$code:=$query.code.extract("cajoled").join("\r";ck ignore null or empty)
@@ -117,21 +134,68 @@ For each ($query;$queries)
 	$plan:=""
 	PROCESS 4D TAGS($template;$plan)
 	$query.plan:=$plan
+	
+	$hash:=Generate digest($plan;SHA1 digest)
+	
+	$aPlan:=$plans[$hash]
+	If ($aPlan=Null)
+		$aPlan:=New object("plan";New collection)
+		$plans[$hash]:=$aPlan
+	End if 
+	$aPlan.plan.push(New object("method";$query.method;"code";$query.code;"plan";$plan))
+	
 End for each 
+
+C_COLLECTION($cPlan)
+C_OBJECT($oCode)
 
 $log:=""
 
-For each ($query;$queries)
-	$log:=$log+"<p><span class=\"method\">"+$query.method+"</span></p>\r"
-	$log:=$log+"<hr />\r"
-	For each ($html;$query.code.extract("html"))
-		$log:=$log+Parse formula($html)+"\r"
+If ($GROUP_BY_PLANS)
+	
+	$cPlan:=New collection
+	
+	For each ($hash;$plans)
+		$aPlan:=$plans[$hash]
+		$oPlan:=New object(\
+		"plan";$aPlan.plan[0].plan;\
+		"count";$aPlan.plan.length;\
+		"code";$aPlan.plan.extract("method";"method";"code";"code"))
+		$cPlan.push($oPlan)
 	End for each 
-	$log:=$log+"<pre>\r"+$query.plan+"</pre>\r"
-	$log:=$log+"<hr />\r"
-End for each 
+	
+	$cPlan:=$cPlan.orderBy("count desc")
+	
+	For each ($aPlan;$cPlan)
+		$log:=$log+"<p><span class=\"count\">("+String($aPlan.count)+")</span></p>\r"
+		$log:=$log+"<pre>\r"+$aPlan.plan+"</pre>\r"
+		$log:=$log+"<hr />\r"
+		For each ($oCode;$aPlan.code)
+			$log:=$log+"<p><span class=\"method\">"+$oCode.method+"</span></p>\r"
+			For each ($html;$oCode.code.extract("html"))
+				$log:=$log+Parse formula($html)+"\r"
+			End for each 
+		End for each 
+		$log:=$log+"<hr />\r"
+	End for each 
+	
+Else 
+	
+	For each ($query;$queries)
+		$log:=$log+"<p><span class=\"method\">"+$query.method+"</span></p>\r"
+		$log:=$log+"<hr />\r"
+		For each ($html;$query.code.extract("html"))
+			$log:=$log+Parse formula($html)+"\r"
+		End for each 
+		$log:=$log+"<pre>\r"+$query.plan+"</pre>\r"
+		$log:=$log+"<hr />\r"
+	End for each 
+	
+end if
+
 
 $head:="<head>\r<style>\rp.code{font-size:13px;font-family:sans-serif;color:#999;}\r"+\
+"span.count{font-size:13px;font-family:sans-serif;font-weight:bold;color:#911;}\r"+\
 "span.command{font-size:13px;font-family:sans-serif;font-weight:bold;color:#050;}\r"+\
 "span.table{font-size:13px;font-family:sans-serif;color:#835C3B;}\r"+\
 "span.method{font-size:13px;font-family:sans-serif;font-weight:bold;font-style:italic;color:#005;}\r"+\
