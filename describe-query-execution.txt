@@ -22,7 +22,7 @@ METHOD GET PATHS(Path all objects;$methods)
 $token:="([[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]))"
 $id:=":C(\\d{1,4})"
 $motif:="("+$token+$id+")"
-  //$field:="(\\[[[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5}\\][[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5})"
+$field:="(\\[[[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5}\\][[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5})"
   //$date:="!\\d+[-./]\\d+[-./]\\d+!"
   //$time:="\\?\\d+:\\d+:\\d+\\?"
   //$string:="\"[^\"]*\""
@@ -56,6 +56,11 @@ For ($m;1;Size of array($methods))
 								If (Match regex("\\(([^;]+\\])(;(?:.+?)(?:;\\*)?(?:\\)))";$line;1;$pos;$len))
 									$tableToken:=Substring($line;$pos{1};$len{1})
 									$ConditionToken:=Substring($line;$pos{2};$len{2})
+									If (Not(Match regex($field;$ConditionToken;1)))
+										  //table name omitted (old syntax)
+										$line:=Insert string($line;$tableToken;$pos{1}+$len{1}+1)
+										$ConditionToken:=Insert string($ConditionToken;$tableToken;2)
+									End if 
 									$continue:=False
 									If (Match regex($table;$tableToken))
 										If (Match regex("(?:=|#|<|>|%|<=|>=)(.+?)(?:;\\*)?(?:\\))";$line;1;$pos;$len))
@@ -191,7 +196,7 @@ Else
 		$log:=$log+"<hr />\r"
 	End for each 
 	
-end if
+End if 
 
 
 $head:="<head>\r<style>\rp.code{font-size:13px;font-family:sans-serif;color:#999;}\r"+\
