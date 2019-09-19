@@ -22,7 +22,8 @@ METHOD GET PATHS(Path all objects;$methods)
 $token:="([[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]))"
 $id:=":C(\\d{1,4})"
 $motif:="("+$token+$id+")"
-$field:="(\\[[[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5}\\][[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5})"
+  //$field_strict:="(\\[[[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5}\\][[:letter:][_]][[:letter:][:number:][. _]]+(?<![. ]):\\d{1,5})"
+  //$field:="(\\[[^]]+(?<![. ]):\\d{1,5}\\][^:]+:\\d{1,5})"
   //$date:="!\\d+[-./]\\d+[-./]\\d+!"
   //$time:="\\?\\d+:\\d+:\\d+\\?"
   //$string:="\"[^\"]*\""
@@ -54,14 +55,22 @@ For ($m;1;Size of array($methods))
 							If ($command_o.name=$command_name)
 								$parsedLine:=$line
 								If (Match regex("\\(([^;]+\\])(;(?:.+?)(?:;\\*)?(?:\\)))";$line;1;$pos;$len))
+									
+									$continue:=False
+									
 									$tableToken:=Substring($line;$pos{1};$len{1})
 									$ConditionToken:=Substring($line;$pos{2};$len{2})
-									If (Not(Match regex($field;$ConditionToken;1)))
+									
+									If (Not(Match regex("^;(\\[[^\\]]+(?<![. ]):\\d{1,5}\\][^:]+:\\d{1,5})";$ConditionToken;1)))
 										  //table name omitted (old syntax)
-										$line:=Insert string($line;$tableToken;$pos{1}+$len{1}+1)
-										$ConditionToken:=Insert string($ConditionToken;$tableToken;2)
+										$where:=$pos{1}+$len{1}+1
+										If (Match regex("[^/]+\\/([^/]+)\\/";$method;1;$pos;$len))
+											$masterTable:=Parse formula("["+Substring($method;$pos{1};$len{1})+"]";Formula out with tokens)
+											$line:=Insert string($line;$masterTable;$where)
+											$ConditionToken:=Insert string($ConditionToken;$masterTable;2)
+										End if 
 									End if 
-									$continue:=False
+									
 									If (Match regex($table;$tableToken))
 										If (Match regex("(?:=|#|<|>|%|<=|>=)(.+?)(?:;\\*)?(?:\\))";$line;1;$pos;$len))
 											$operand:=Substring($line;$pos{1};$len{1})
@@ -137,6 +146,12 @@ For each ($query;$queries)
 	"DESCRIBE QUERY EXECUTION:C1044(False:C215)\r"+\
 	"-->$4deval($path)"
 	$plan:=""
+	
+	ERASE WINDOW($w)
+	GOTO XY(0;0)
+	MESSAGE($code)
+	DELAY PROCESS(Current process;0)
+	
 	PROCESS 4D TAGS($template;$plan)
 	$query.plan:=$plan
 	
@@ -209,7 +224,10 @@ $head:="<head>\r<style>\rp.code{font-size:13px;font-family:sans-serif;color:#999
 $log:="<html>\r"+$head+"<body>\r"+$log+"</body>\r</html>"
 
 $path:=System folder(Desktop)+"plans.html"
-
 TEXT TO DOCUMENT($path;$log;"utf-8")
 
-SET TEXT TO PASTEBOARD($log)
+$path:=System folder(Desktop)+"queries.json"
+TEXT TO DOCUMENT($path;JSON Stringify($queries);"utf-8")
+
+$path:=System folder(Desktop)+"plans.json"
+TEXT TO DOCUMENT($path;JSON Stringify($cPlan);"utf-8")
